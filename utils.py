@@ -10,9 +10,12 @@ import time
 MASK_VALUE = -1
 
 class Settings:
-    def __init__(self, data_train, data_test, layers=[100,100,10], act_fnc="relu", epochs=1000, batch_size=10, lr=0.001, opt="adam", drp=0.25):
+    def __init__(self, data_train, data_test, labelX, labelY, tasks, layers=[100,100,10], act_fnc="relu", epochs=1000, batch_size=10, lr=0.001, opt="adam", drp=0.25):
         self.data_train = data_train
         self.data_test = data_test
+        self.labelX = labelX
+        self.labelY = labelY
+        self.tasks = tasks
         self.layers = layers
         self.act_fnc = act_fnc
         self.epochs = epochs
@@ -30,21 +33,21 @@ def masked_accuracy(y_true, y_pred):
     correct = K.sum(K.cast(K.equal(y_true, K.round(y_pred)), dtype=K.floatx()))
     return correct/(total+0.000001)
     
-def prepare_data(data_train, data_test):
+def prepare_data(data_train, data_test, labelX, labelY):
     data = data_train.fillna(MASK_VALUE)
     data_test = data_test.fillna(MASK_VALUE)
 
-    start_fps = data.columns.get_loc('bit1')
-    X = data.iloc[:,start_fps:].values
-    y = data.iloc[:,3:start_fps].values
-    X_test = data_test.iloc[:,start_fps:].values
-    y_test = data_test.iloc[:,3:start_fps].values
+    #start_fps = data.columns.get_loc('bit1')
+    X = data.loc[:,labelX].values
+    y = data.loc[:,labelY].values
+    X_test = data_test.loc[:,labelX].values
+    y_test = data_test.loc[:,labelY].values
     
     return X,y,X_test,y_test
 
 def MTL_model_CV(Set):
     
-    X,y,X_test,y_test = prepare_data(Set.data_train, Set.data_test)
+    X,y,X_test,y_test = prepare_data(Set.data_train, Set.data_test, Set.labelX, Set.labelY)
     
     kf = KFold(n_splits=3, shuffle = True, random_state = 26)
     
@@ -95,13 +98,14 @@ def do_opt(opt, lr):
     return optim
     
 
-def MTL_model(X_train, X_test, y_train, Set, early_stop="yes"):
+def MTL_model(X_train, X_test, y_train, y_test, Set, early_stop="yes"):
     
     X_train_scaled = X_train.copy()
     X_test_scaled = X_test.copy()
     
     optim = do_opt(Set.opt, Set.lr)
     n_y = y_train.shape[1]
+    n_x = y_train.shape[0]
     ############################
     inp = Input(shape=(X_train.shape[1],))
     hid = inp
@@ -135,20 +139,20 @@ def MTL_model(X_train, X_test, y_train, Set, early_stop="yes"):
 
 def STL_models_CV(Set):
 
-    X,y,X_test,y_test = prepare_data(Set.data_train, Set.data_test)
+    X,y,X_test,y_test = prepare_data(Set.data_train, Set.data_test, Set.labelX, Set.labelY)
     
     res = dict()
     res['val_pred'],res['val_true'],res['test_pred'],res['test_true'] = [],[],[],[]
     
     ##########################
     for i in range(y.shape[1]):
-        print(tasks[i])
+        print(Set.tasks[i])
         Xred = X[y[:,i]!=MASK_VALUE,:]
         yred = y[y[:,i]!=MASK_VALUE,i]
         Xtestred = X_test[y_test[:,i]!=MASK_VALUE,:]
         ytestred = y_test[y_test[:,i]!=MASK_VALUE,i]
         
-        print(f" No samples = {len(Xred)} / {len(Xtestred)} actives = {np.sum(yred==1)/len(yred)} / {np.sum(ytestred==1)/len(ytestred)}")
+        #print(f" No samples = {len(Xred)} / {len(Xtestred)} actives = {np.sum(yred==1)/len(yred)} / {np.sum(ytestred==1)/len(ytestred)}")
         
         kf = KFold(n_splits=3, shuffle = True, random_state = 26)
     
@@ -170,14 +174,15 @@ def STL_models_CV(Set):
             n_eps.append(n_ep)
         
         n_ep = int(np.mean(np.array(n_eps)))
-        res[tasks[i]+' val_pred'] = np.concatenate(y_val_pred_all, axis=0)
-        res[tasks[i]+' val_true'] = np.concatenate(y_val_true_all, axis=0)
+        res[Set.tasks[i]+' val_pred'] = np.concatenate(y_val_pred_all, axis=0)
+        res[Set.tasks[i]+' val_true'] = np.concatenate(y_val_true_all, axis=0)
 
         start_time = time.time()
         y_test_pred, n_ep = STL_model(Xred, Xtestred, yred, ytestred, Set, 'no')
         end_time = time.time()
 
-        res[tasks[i]+' test_pred'] = y_test_pred
+        res[Set.tasks[i]+' test_pred'] = y_test_pred
+        res[Set.tasks[i]+' test_true'] = ytestred
 
     return res
 
