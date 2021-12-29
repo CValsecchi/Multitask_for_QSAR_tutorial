@@ -15,9 +15,9 @@ Anaconda, an open-source distribution of Python programming language for scienti
 (optional) Git, a version control system. Git installation is platform dependent; refer to the instructions available at www.atlassian.com/git/tutorials/install-git.
 
 Code Download
-The open-source code is available as a GitHub repository at URL: github.com/CValsecchi.... Users can clone the repository (i.e., obtain a local copy of the repository contents) with the following command on a Linux/Mac terminal or Windows command line:
+The open-source code is available as a GitHub repository at URL: github.com/CValsecchi/Multitask_for_QSAR_tutorial Users can clone the repository (i.e., obtain a local copy of the repository contents) with the following command on a Linux/Mac terminal or Windows command line:
 
-git clone https://github.com/CValsecchi…
+git clone https://github.com/CValsecch/Multitask_for_QSAR_tutorial
 
 A copy of the repository will be generated on the local computer in the dedicated GitHub folder. It is also possible to manually download a compressed file of the repository by selecting the download button in the GitHub repository. You can then move to the repository, e.g., with the following commands:
 
